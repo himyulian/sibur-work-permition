@@ -56,11 +56,11 @@ export default {
       }, */
       columns: [
         {
-          name: 'desc',
+          name: 'Id',
           required: true,
-          label: 'Dessert (100g serving)',
+          label: 'ID',
           align: 'left',
-          field: row => row.name,
+          field: row => row.Id,
           format: val => `${val}`,
           sortable: true
         },

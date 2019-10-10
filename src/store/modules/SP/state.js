@@ -2,11 +2,13 @@ export default {
   filter: '',
   loading: false,
   pagination: {
-    sortBy: 'name',
+    sortBy: 'Id',
     descending: false,
     page: 1,
-    rowsPerPage: 3,
-    rowsNumber: 10
+    rowsPerPage: 5,
+    rowsNumber: 100,
+    minId: 0,
+    maxId: 999999,
   },
   itemsND: [
     {

@@ -23,31 +23,39 @@ export async function actFetchND ({ commit }) {
 
 export async function onRequest ({ commit, getters }, props) {
   try {
-    let { page, rowsPerPage, rowsNumber, sortBy, descending } = props.pagination
-    let filter = props.filter
+    const { page, rowsPerPage, rowsNumber, sortBy, descending, minId, maxId } = props.pagination
+    const filter = props.filter
   
+    console.log(getters.getPagination)
+    console.log(props.pagination)
+
     commit('setloading', true)
   
     // update rowsCount with appropriate value
     commit('setPagination', { rowsNumber: await getRowsNumberCount(filter) || rowsNumber })
 
     // get all rows if "All" (0) is selected
-    let fetchCount = rowsPerPage === 0 ? rowsNumber : rowsPerPage
+    const fetchCount = rowsPerPage === 0 ? rowsNumber : rowsPerPage
 
     // calculate starting row of data
-    let startRow = (page - 1) * rowsPerPage
+    const startRow = (page - 1) * rowsPerPage
 
     // fetch data from "server"
-    let returnedData = await fetchFromServer(startRow, fetchCount, filter, sortBy, descending) || []
+    const returnedData = await fetchFromServer(startRow, fetchCount, filter, sortBy, descending, minId, maxId, page) || []
 
     // clear out existing data and add new
     commit('setData', returnedData)
+
+    console.log('min-ID: ', getMinimumId(returnedData))
+    console.log('max-ID: ', getMaximumId(returnedData))
 
     // don't forget to update local pagination object
     commit('setPagination', { page })
     commit('setPagination', { rowsPerPage })
     commit('setPagination', { sortBy })
     commit('setPagination', { descending })
+    commit('setPagination', { minId: getMinimumId(returnedData) })
+    commit('setPagination', { maxId: getMaximumId(returnedData) })
 
     // ...and turn of loading indicator
     commit('setloading', false)
@@ -56,19 +64,35 @@ export async function onRequest ({ commit, getters }, props) {
     console.error(err)
   }
 
+  const getMinimumId = (data) => Math.min(data.map(v => v.Id)) 
+  const getMaximumId = (data) => Math.max(data.map(v => v.Id)) 
+
   // SELECT * FROM ... WHERE...LIMIT...
-  async function fetchFromServer (startRow, count, filter, sortBy, descending) {
+  async function fetchFromServer (startRow, count, filter, sortBy, descending, min, max, page) {
     try {
-      // await (new Promise((resolve, reject) => {
-      //   setTimeout(() => {
-      //     resolve()
-      //   }, 1500)
-      // }))
   
       let data = []
   
       if (!filter) {
-        data = getters.getOriginal.slice(startRow, startRow + count)
+
+        if (!descending) {
+
+          if (page === 1) {
+            data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.top(count).orderBy(sortBy, !descending).get()
+            console.log(data)
+          } else if (page > getters.getPagination.page) {
+            data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id gt ${max}`).top(count).orderBy(sortBy, !descending).get()
+            console.log(data)
+          } else if (page < getters.getPagination.page) {
+            data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id lt ${min}`).top(count).orderBy(sortBy, !descending).get()
+            console.log(data)
+          }
+
+        } else {
+          data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id gt 35204`).top(count).orderBy(sortBy, !descending).get()
+          console.log(data)
+        }
+        // data = getters.getOriginal.slice(startRow, startRow + count)
       }
       else {
         let found = 0
@@ -87,21 +111,21 @@ export async function onRequest ({ commit, getters }, props) {
         }
       }
   
-      // handle sortBy
-      if (sortBy) {
-        data.sort((a, b) => {
-          let x = descending ? b : a
-          let y = descending ? a : b
-          if (sortBy === 'desc') {
-            // string sort
-            return x[sortBy] > y[sortBy] ? 1 : x[sortBy] < y[sortBy] ? -1 : 0
-          }
-          else {
-            // numeric sort
-            return parseFloat(x[sortBy]) - parseFloat(y[sortBy])
-          }
-        })
-      }
+      // // handle sortBy
+      // if (sortBy) {
+      //   data.sort((a, b) => {
+      //     let x = descending ? b : a
+      //     let y = descending ? a : b
+      //     if (sortBy === 'desc') {
+      //       // string sort
+      //       return x[sortBy] > y[sortBy] ? 1 : x[sortBy] < y[sortBy] ? -1 : 0
+      //     }
+      //     else {
+      //       // numeric sort
+      //       return parseFloat(x[sortBy]) - parseFloat(y[sortBy])
+      //     }
+      //   })
+      // }
   
       return data
     } catch (err) {
@@ -112,22 +136,20 @@ export async function onRequest ({ commit, getters }, props) {
   // emulate 'SELECT count(*) FROM ...WHERE...'
   async function getRowsNumberCount (filter) {
     try {
-      // await (new Promise((resolve, reject) => {
-      //   setTimeout(() => {
-      //     reject('ERROR RowNumberCount')
-      //   }, 1500)
-      // }))
-
+      
       if (!filter) {
-        return getters.getOriginal.length
+        const itemCount = await sp.web.getList('/orgunits/vsk/Lists/List5').select('ItemCount').get()
+        return itemCount.ItemCount
       }
-      let count = 0
-      getters.getOriginal.forEach((treat) => {
-        if (treat['name'].includes(filter)) {
-          ++count
-        }
-      })
-      return count
+      const returnedRows = await sp.web.getList('/orgunits/vsk/Lists/List5').items.select('ID').filter(`fldWorkType eq '${filter}'`).getAll()
+      // let count = 0
+      // getters.getOriginal.forEach((treat) => {
+      //   if (treat['name'].includes(filter)) {
+      //     ++count
+      //   }
+      // })
+      // return count
+      return returnedRows.length
     } catch (err) {
       console.error(err)
     }

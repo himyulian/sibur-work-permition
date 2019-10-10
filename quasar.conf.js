@@ -61,6 +61,7 @@ module.exports = function (ctx) {
     build: {
       scopeHoisting: true,
       publicPath: '',
+      // sourceMap: true,
       // vueRouterMode: 'history',
       // showProgress: false,
       // gzip: true,
