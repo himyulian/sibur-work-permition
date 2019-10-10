@@ -6,7 +6,7 @@ export async function actFetchND ({ commit }) {
   try {
     const result = await Promise.all([
       sp.web.getList('/orgunits/vsk/Lists/List5').items.get(),    /* 06 Журнал регистрации НД */
-      sp.web.getList('/orgunits/vsk/Lists/00').items.getAll(),    /* 00 Справочник служб и производств */   
+      sp.web.getList('/orgunits/vsk/Lists/00').items.getAll(),    /* 00 Справочник служб и производств */
       sp.web.getList('/orgunits/vsk/Lists/001').items.getAll()    /* 00 Справочник отделов и установок */
     ])
     // commit('setItems', items)
@@ -25,12 +25,12 @@ export async function onRequest ({ commit, getters }, props) {
   try {
     const { page, rowsPerPage, rowsNumber, sortBy, descending, minId, maxId } = props.pagination
     const filter = props.filter
-  
+
     console.log(getters.getPagination)
     console.log(props.pagination)
 
     commit('setloading', true)
-  
+
     // update rowsCount with appropriate value
     commit('setPagination', { rowsNumber: await getRowsNumberCount(filter) || rowsNumber })
 
@@ -45,9 +45,6 @@ export async function onRequest ({ commit, getters }, props) {
 
     // clear out existing data and add new
     commit('setData', returnedData)
-
-    console.log('min-ID: ', getMinimumId(returnedData))
-    console.log('max-ID: ', getMaximumId(returnedData))
 
     // don't forget to update local pagination object
     commit('setPagination', { page })
@@ -64,15 +61,20 @@ export async function onRequest ({ commit, getters }, props) {
     console.error(err)
   }
 
-  const getMinimumId = (data) => Math.min(data.map(v => v.Id)) 
-  const getMaximumId = (data) => Math.max(data.map(v => v.Id)) 
+  function getMinimumId (data) {
+    return Math.min(data.map(v => v.Id))
+  }
+
+  function getMaximumId (data) {
+    return Math.max(data.map(v => v.Id))
+  }
 
   // SELECT * FROM ... WHERE...LIMIT...
   async function fetchFromServer (startRow, count, filter, sortBy, descending, min, max, page) {
     try {
-  
+
       let data = []
-  
+
       if (!filter) {
 
         if (!descending) {
@@ -110,7 +112,7 @@ export async function onRequest ({ commit, getters }, props) {
           }
         }
       }
-  
+
       // // handle sortBy
       // if (sortBy) {
       //   data.sort((a, b) => {
@@ -126,7 +128,7 @@ export async function onRequest ({ commit, getters }, props) {
       //     }
       //   })
       // }
-  
+
       return data
     } catch (err) {
       console.error(err)
@@ -136,7 +138,7 @@ export async function onRequest ({ commit, getters }, props) {
   // emulate 'SELECT count(*) FROM ...WHERE...'
   async function getRowsNumberCount (filter) {
     try {
-      
+
       if (!filter) {
         const itemCount = await sp.web.getList('/orgunits/vsk/Lists/List5').select('ItemCount').get()
         return itemCount.ItemCount
