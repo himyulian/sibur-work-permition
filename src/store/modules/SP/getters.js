@@ -9,3 +9,7 @@ export function getOriginal (state) {
 export function getPagination (state) {
   return state.pagination
 }
+
+export function getCurrentPaged (state) {
+  return state.currentPaged
+}

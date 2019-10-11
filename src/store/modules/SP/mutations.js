@@ -29,3 +29,7 @@ export function setPagination (state, data) {
 export function setData (state, data) {
   state.data.splice(0, state.data.length, ...data)
 }
+
+export function setCurrentPaged (state, paged) {
+  state.currentPaged = paged
+}

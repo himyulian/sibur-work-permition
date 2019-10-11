@@ -10,6 +10,7 @@ export default {
     minId: 0,
     maxId: 999999,
   },
+  currentPaged: null,
   itemsND: [
     {
       Id: 11,

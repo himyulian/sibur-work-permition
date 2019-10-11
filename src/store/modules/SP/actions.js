@@ -1,4 +1,4 @@
-import { sp } from '@pnp/sp'
+import { sp, PagedItemCollection } from '@pnp/sp'
 import { Notify } from 'quasar'
 
 export async function actFetchND ({ commit }) {
@@ -62,11 +62,11 @@ export async function onRequest ({ commit, getters }, props) {
   }
 
   function getMinimumId (data) {
-    return Math.min(data.map(v => v.Id))
+    return Math.min(...data.map(v => v.Id))
   }
 
   function getMaximumId (data) {
-    return Math.max(data.map(v => v.Id))
+    return Math.max(...data.map(v => v.Id))
   }
 
   // SELECT * FROM ... WHERE...LIMIT...
@@ -74,26 +74,47 @@ export async function onRequest ({ commit, getters }, props) {
     try {
 
       let data = []
+      const list = sp.web.getList('/orgunits/vsk/Lists/List5')
+      const items = list.items.orderBy(sortBy, !descending).top(count);
+      let paged = await items.getPaged();
 
       if (!filter) {
 
-        if (!descending) {
-
-          if (page === 1) {
-            data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.top(count).orderBy(sortBy, !descending).get()
-            console.log(data)
-          } else if (page > getters.getPagination.page) {
-            data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id gt ${max}`).top(count).orderBy(sortBy, !descending).get()
-            console.log(data)
-          } else if (page < getters.getPagination.page) {
-            data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id lt ${min}`).top(count).orderBy(sortBy, !descending).get()
-            console.log(data)
-          }
-
-        } else {
-          data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id gt 35204`).top(count).orderBy(sortBy, !descending).get()
+        if (page === 1) {
+          data = paged.results
+          // data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.top(count).orderBy(sortBy, !descending).getPaged()
           console.log(data)
+          commit('setCurrentPaged', paged)
+        } else if (page > getters.getPagination.page) {
+          paged = await getters.getCurrentPaged.getNext();
+          data = paged.results
+          // data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id gt ${max}`).top(count).orderBy(sortBy, !descending).get()
+          console.log(data)
+          commit('setCurrentPaged', paged)
+        } else if (page < getters.getPagination.page) {
+          paged = await getPrev(items, getters.getCurrentPaged);
+          data = paged.results
+          // data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id lt ${min}`).top(count).orderBy(sortBy, !descending).get()
+          console.log(data)
+          commit('setCurrentPaged', paged)
         }
+
+        // if (!descending) {
+
+        //   // console.log('1st page results', paged.results.map(r => `${r.Id} - ${r.Title}`));
+
+        //   // paged = await paged.getNext();
+        //   // console.log('2nd page results', paged.results.map(r => `${r.Id} - ${r.Title}`));
+
+        //   // paged = await getPrev(items, paged);
+        //   // console.log('1st page again', paged.results.map(r => `${r.Id} - ${r.Title}`));
+
+
+
+        // } else {
+        //   data = await sp.web.getList('/orgunits/vsk/Lists/List5').items.filter(`Id gt 35204`).top(count).orderBy(sortBy, !descending).get()
+        //   console.log(data)
+        // }
         // data = getters.getOriginal.slice(startRow, startRow + count)
       }
       else {
@@ -111,6 +132,23 @@ export async function onRequest ({ commit, getters }, props) {
             ++items
           }
         }
+      }
+
+      function getPrev (items, paged) {
+        const nextUrl = paged.nextUrl // Private
+        const prevUrl = nextUrl
+            .split('skiptoken=')[1].split('&')[0].split('%26')
+            .map(p => p.split('%3d'))
+            .filter(p => p[0].indexOf('p_') === 0)
+            .reduce((r, p) => {
+                const value = p[0].replace('p_', '').split('_x005f_').reduce((res, prop) => {
+                    return res[prop];
+                }, paged.results[0]);
+                return r.replace(p.join('%3d'), `${p[0]}%3d${value}`);
+            }, nextUrl)
+            .replace(new RegExp('Paged%3dTRUE', 'i'), 'Paged%3dTRUE%26PagedPrev%3dTRUE');
+        const pagedCollection = new PagedItemCollection(items, prevUrl, null);
+        return pagedCollection.getNext();
       }
 
       // // handle sortBy
