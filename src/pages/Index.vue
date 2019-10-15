@@ -2,6 +2,7 @@
   <q-page class="flex flex-center">
     <div class="q-pa-md">
       <q-table
+        dense
         title="Treats"
         :data="data"
         :columns="columns"
