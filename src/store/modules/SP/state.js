@@ -3,7 +3,7 @@ export default {
   loading: false,
   pagination: {
     sortBy: 'Id',
-    descending: false,
+    descending: true,
     page: 1,
     rowsPerPage: 5,
     rowsNumber: 100,

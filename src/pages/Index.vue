@@ -8,6 +8,7 @@
         :columns="columns"
         row-key="id"
         :pagination.sync="pagination"
+        :rows-per-page-options="[5, 10, 30]"
         :loading="loading"
         :filter="filter"
         @request="onRequest"
